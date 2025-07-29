@@ -1,6 +1,6 @@
 import boto3
-from datetime import datetime
 import json
+from datetime import datetime
 
 # AWS clients
 ec2 = boto3.client('ec2')
@@ -73,7 +73,7 @@ def contain_ec2s(instance_ids, containment_sg_id, shutdown_instances):
         )
         print(f"[+] Applied Containment-SG to {instance_id}")
 
-    if shutdown_instances:
+    if shutdown_instances and instance_ids:
         ec2.stop_instances(InstanceIds=instance_ids)
         print(f"[!] Shutdown triggered for EC2 instances: {instance_ids}")
 
@@ -133,24 +133,34 @@ def contain_nacls(subnet_ids):
         print(f"[+] NACL containment applied for subnet {subnet_id}")
 
 
-def main():
-    # Inputs
-    vpc_id = input("Enter VPC ID: ").strip()
-    subnet_ids = input("Enter subnet IDs (comma-separated): ").strip().split(",")
-    instance_ids = input("Enter EC2 instance IDs (comma-separated): ").strip().split(",")
-    shutdown_instances = input("Shutdown instances? (yes/no): ").lower() == 'yes'
-    contain_subnets = input("Contain subnets with NACLs? (yes/no): ").lower() == 'yes'
+def lambda_handler(event, context):
+    """
+    Sample Event Input:
+    {
+        "vpc_id": "vpc-12345678",
+        "subnet_ids": ["subnet-1111", "subnet-2222"],
+        "instance_ids": ["i-abc123", "i-def456"],
+        "shutdown_instances": true,
+        "contain_nacls": true
+    }
+    """
+    vpc_id = event['vpc_id']
+    subnet_ids = event['subnet_ids']
+    instance_ids = event['instance_ids']
+    shutdown_instances = event.get('shutdown_instances', False)
+    contain_nacls_flag = event.get('contain_nacls', False)
 
     # 1. Create/get containment SG
     containment_sg_id = create_or_get_containment_sg(vpc_id)
 
-    # 2. Contain EC2s
+    # 2. Contain EC2 instances
     contain_ec2s(instance_ids, containment_sg_id, shutdown_instances)
 
     # 3. Optionally contain subnet-level NACLs
-    if contain_subnets:
+    if contain_nacls_flag:
         contain_nacls(subnet_ids)
 
-
-if __name__ == "__main__":
-    main()
+    return {
+        "statusCode": 200,
+        "body": f"Contained EC2s {instance_ids} and Subnets {subnet_ids} (NACL containment: {contain_nacls_flag})"
+    }

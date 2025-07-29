@@ -21,6 +21,7 @@ How to Use It
 
     
 Pass an event JSON when invoking:
+```
 {
   "vpc_id": "vpc-0319c7b9b551e2263",
   "subnet_ids": ["subnet-01d9e7d14a9c91e0e"],
@@ -28,3 +29,4 @@ Pass an event JSON when invoking:
   "shutdown_instances": true,
   "contain_nacls": true
 }
+```
